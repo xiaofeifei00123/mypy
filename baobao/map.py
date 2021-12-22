@@ -23,6 +23,7 @@ from cartopy.io.shapereader import Reader, natural_earth
 import matplotlib as mpl
 from matplotlib.path import Path
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from cartopy.mpl import geoaxes
 
 import numpy as np
@@ -33,6 +34,7 @@ class Map():
     pass
     def __init__(self) -> None:
         pass
+        # self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
         self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Province_shp/henan.shp'
         self.path_city = '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_henan/henan.shp'
 
@@ -75,16 +77,21 @@ class Map():
         ax.add_feature(city, linewidth=0.5, zorder=2) # zorder 设置图层为2, 总是在最上面显示
 
         ## 绘制坐标标签
-        ax.set_yticks(np.arange(map_dic['extent'][2], map_dic['extent'][3] + map_dic['extent_interval_lat'], map_dic['extent_interval_lat']), crs=proj)
-        ax.set_xticks(np.arange(map_dic['extent'][0], map_dic['extent'][1] + map_dic['extent_interval_lon'], map_dic['extent_interval_lon']), crs=proj)
-        ax.xaxis.set_major_formatter(LongitudeFormatter())
-        ax.xaxis.set_minor_locator(plt.MultipleLocator(1))
-        ax.yaxis.set_major_formatter(LatitudeFormatter())
-        ax.yaxis.set_minor_locator(plt.MultipleLocator(1))
+        ax.set_yticks(np.arange(map_dic['extent'][2], map_dic['extent'][3] + map_dic['extent_interval_lat'], map_dic['extent_interval_lat'], dtype='int'), crs=proj)
+        ax.set_xticks(np.arange(map_dic['extent'][0], map_dic['extent'][1] + map_dic['extent_interval_lon'], map_dic['extent_interval_lon'], dtype='int',), crs=proj)
+
+        # ax.yaxis.set_minor_locator(plt.MultipleLocator(1))
+        ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+        # ax.xaxis.set_minor_locator(plt.MultipleLocator(1))
+
+        ax.xaxis.set_major_formatter(LongitudeFormatter(degree_symbol="$^{\circ}$"))  # 使用半角的度，用latex公式给出
+        ax.yaxis.set_major_formatter(LatitudeFormatter(degree_symbol="$^{\circ}$"))
+
+        ax.tick_params(axis='both', labelsize=25, direction='out')
         ax.tick_params(which='major',length=10,width=2.0) # 控制标签大小 
         ax.tick_params(which='minor',length=5,width=1.0)  #,colors='b')
-        ax.yaxis.set_minor_locator(plt.MultipleLocator(1))
-        ax.tick_params(axis='both', labelsize=30, direction='out')
+
         return ax
 
     def add_station(self, ax, station, **note):
@@ -131,7 +138,7 @@ class Map():
             for i in range(len(x)):
                 # print(x[i])
                 ax.text(x[i]-0.2,
-                        y[i] + 0.2,
+                        y[i] + 0.1,
                         station_name[i],
                         transform=ccrs.PlateCarree(),
                         alpha=1.,
@@ -142,7 +149,8 @@ class Map():
 
 if __name__ == '__main__':
 ############# 测试 ############
-    fig = plt.figure(figsize=(12, 12), dpi=600)
+    # fig = plt.figure(figsize=(12, 12), dpi=600)
+    fig = plt.figure(figsize=(12, 8), dpi=600)
     proj = ccrs.PlateCarree()  # 创建坐标系
     ax = fig.add_axes([0.1,0.1,0.85,0.85], projection=proj)
     ma = Map()
