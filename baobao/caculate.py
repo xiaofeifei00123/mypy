@@ -359,3 +359,27 @@ def get_centroid(flnm= '/mnt/zfm_18T/fengxiang/HeNan/Data/1912_900m/rain.nc', t_
     lon = lon.round(3)
     lat = lat.round(3)
     return lat, lon
+
+def caculate_average_wrf(da, area = {'lat1':33, 'lat2':34, 'lon1':111.5, 'lon2':113,}):
+    """求wrfout数据，在区域area内的区域平均值
+
+    Args:
+        da ([type]): 直接利用wrf-python 从wrfout中得到的某个变量的数据
+
+        area = {
+            'lat1':33,
+            'lat2':34,
+            'lon1':111.5,
+            'lon2':113,
+        }
+    Returns:
+        [type]: [description]
+    """
+    lon = da['XLONG'].values
+    lat = da['XLAT'].values
+    ## 构建掩膜, 范围内的是1， 不在范围的是nan值
+    clon = xr.where((lon<area['lon2']) & (lon>area['lon1']), 1, np.nan)
+    clat = xr.where((lat<area['lat2']) & (lat>area['lat1']), 1, np.nan)
+    da = da*clon*clat
+    da_mean = da.mean(dim=['south_north', 'west_east'])
+    return da_mean

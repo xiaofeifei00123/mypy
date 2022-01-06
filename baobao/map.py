@@ -99,6 +99,8 @@ class Map():
 
         Args:
             ax ([type]): [description]
+            note: 相当于传了个字典进来了，如果没有参数的话，就是空的字典
+            参考：https://www.cnblogs.com/bingabcd/p/6671368.html
         
         Example:
         
@@ -109,7 +111,7 @@ class Map():
                     'lon': 113.65
                 },
             }
-            ma.add_station(ax, station, justice=True)
+            ma.add_station(ax, station, justice=True, delx=0.1)
         """
         pass
         values = station.values()
@@ -134,11 +136,20 @@ class Map():
                    zorder=2
                    )
         # 给站点加注释
-        if note['justice']:
+        # if note:
+        #     pass
+        if 'justice' in note.keys():
+
             for i in range(len(x)):
                 # print(x[i])
-                ax.text(x[i]-0.2,
-                        y[i] + 0.1,
+                delx = -0.2
+                dely = 0.1
+                if 'delx' in note.keys():
+                    delx = note['delx']
+                if 'dely' in note.keys():
+                    dely = note['dely']
+                ax.text(x[i] + delx,
+                        y[i] + dely,
                         station_name[i],
                         transform=ccrs.PlateCarree(),
                         alpha=1.,
