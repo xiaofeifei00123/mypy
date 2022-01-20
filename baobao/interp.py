@@ -106,10 +106,10 @@ def rain_station2grid(da, area, r=0.2, min_neighbors=3):
     ddc = xr.concat(grid_list,dim='time')
     return ddc
 
-def grid2station():
-    """格点数据插值到站点上
-    """
-    sta = cc.id.values
-    lon = xr.DataArray(cc.lon.values, coords=[sta], dims=['sta'])
-    lat = xr.DataArray(cc.lat.values, coords=[sta], dims=['sta'])
-    rr = rain.interp(lon=lon, lat=lat, method='nearest').round(1)
+# def grid2station(cc):
+#     """格点数据插值到站点上
+#     """
+#     sta = cc.id.values
+#     lon = xr.DataArray(cc.lon.values, coords=[sta], dims=['sta'])
+#     lat = xr.DatArray(cc.lat.values, coords=[sta], dims=['sta'])
+#     rr = rain.interp(lon=lon, lat=lat, method='nearest').round(1)

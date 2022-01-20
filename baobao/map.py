@@ -73,8 +73,8 @@ class Map():
             proj,
             edgecolor='k',
             facecolor='none')
-        ax.add_feature(province, linewidth=2, zorder=2) # zorder 设置图层为2, 总是在最上面显示
-        ax.add_feature(city, linewidth=0.5, zorder=2) # zorder 设置图层为2, 总是在最上面显示
+        ax.add_feature(province, linewidth=1, zorder=2, alpha=0.6) # zorder 设置图层为2, 总是在最上面显示
+        ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
 
         ## 绘制坐标标签
         ax.set_yticks(np.arange(map_dic['extent'][2], map_dic['extent'][3] + map_dic['extent_interval_lat'], map_dic['extent_interval_lat'], dtype='int'), crs=proj)
@@ -157,6 +157,10 @@ class Map():
                         zorder=2,
                         )
 
+def draw_south_sea(fig,):
+    pass
+    ax2 = fig.add_axes([0.798, 0.145, 0.2, 0.2],projection=ccrs.PlateCarree())
+    ax2.add_geometries(Reader('/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp').geometries(),ccrs.PlateCarree(),facecolor='none',edgecolor='black',linewidth=0.8)
 
 if __name__ == '__main__':
 ############# 测试 ############

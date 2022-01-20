@@ -22,11 +22,14 @@ from metpy.calc import virtual_potential_temperature
 from metpy.calc import potential_temperature
 from metpy.calc import relative_humidity_from_dewpoint
 from metpy.calc import dewpoint_from_relative_humidity
+from metpy.calc import equivalent_potential_temperature
 import metpy.interpolate as interp
 
 
-def caculate_q_rh_thetav(ds):
+def caculate_q_rh_theta(ds):
     """计算比湿，位温等诊断变量
+    theta, theta_e, theta_v
+    主要用于计算探空资料获得的数据
     传入的温度和露点必须是摄氏温度
     根据td或者rh计算q,theta_v
     返回比湿q, 虚位温theta_v, 相对湿度rh
@@ -72,12 +75,112 @@ def caculate_q_rh_thetav(ds):
     w = mixing_ratio_from_specific_humidity(q)
     theta_v = virtual_potential_temperature(pressure, temperature, w)
 
+    theta = potential_temperature(pressure, temperature)
+    theta_e = equivalent_potential_temperature(pressure, temperature, dew_point)
+
     if 'td' in var_list:
         rh = relative_humidity_from_dewpoint(temperature, dew_point)
+        var_name_list = ['q', 'rh', 'theta_v', 'theta', 'theta_e']
+        var_data_list = [q, rh, theta_v, theta, theta_e]
+    elif 'rh' in var_list:
+        pass
+        var_name_list = ['q', 'td', 'theta_v', 'theta', 'theta_e']
+        var_data_list = [q, dew_point, theta_v, theta, theta_e]
+
+    ## 融合各物理量为一个DataArray
+
+    ds_return = xr.Dataset()
+
+    for var_name, var_data in zip(var_name_list, var_data_list):
+        pass
+        ## 为了去除单位
+        dda = xr.DataArray(
+            var_data, 
+            # coords=[time_coord,pressure_coord],
+            coords = t.coords,
+            dims=t.dims)
+            # dims=['time', 'pressure'])
+
+        ds_return[var_name] = xr.DataArray(
+            dda.values, 
+            # coords=[time_coord,pressure_coord],
+            coords=t.coords,
+            dims=t.dims)
+    ## 转换维度顺序        
+    ds_return = ds_return.transpose(*dims_origin)
+    return ds_return
+
+
+
+
+
+
+
+
+
+
+
+def caculate_q_rh_thetav(ds):
+    """计算比湿，位温等诊断变量
+    用于计算wrfout所获得的数据
+    传入的温度和露点必须是摄氏温度
+    根据td或者rh计算q,theta_v
+    返回比湿q, 虚位温theta_v, 相对湿度rh
+
+    Args:
+        ds (Dataset): 包含有temp ,td的多维数据
+        这里传入Dataset合理一点
+    """
+    pass        
+    ## 获得温度和露点温度
+    dims_origin = ds['temp'].dims  # 这是一个tuple, 初始维度顺序
+    ds = ds.transpose(*(...,'pressure'))
+
+    var_list = ds.data_vars
+    t = ds['temp']
+
+    ## 转换单位
+    pressure = units.Quantity(t.pressure.values, "hPa")
+
+    ## 针对给的rh 或是td做不同的计算
+    ## 需要确定t的单位
+    if 'td' in var_list:
+        """探空资料的温度单位大多是degC"""
+        td = ds['td']
+        dew_point = units.Quantity(td.values, "degC")
+        temperature = units.Quantity(t.values, "degC")
+    elif 'rh' in var_list:
+        """FNL资料的单位是K"""
+        # rh = da.sel(variable='rh')
+        rh = ds['rh']
+        rh = units.Quantity(rh.values, "%")
+        temperature = units.Quantity(t.values, "degC")
+        dew_point = dewpoint_from_relative_humidity(temperature, rh)
+    else:
+        print("输入的DataArray中必须要有rh或者td中的一个")
+    
+    ## 记录维度坐标
+    # time_coord = t.time.values
+    # pressure_coord = t.pressure.values
+
+    ## 计算诊断变量
+    q = specific_humidity_from_dewpoint(pressure, dew_point)
+    w = mixing_ratio_from_specific_humidity(q)
+    theta_v = virtual_potential_temperature(pressure, temperature, w)
+
+    theta = potential_temperature(pressure, temperature)
+    theta_e = equivalent_potential_temperature(pressure, temperature, dew_point)
+
+    if 'td' in var_list:
+        rh = relative_humidity_from_dewpoint(temperature, dew_point)
+        # var_name_list = ['q', 'rh', 'theta_v', 'theta', 'theta_e']
+        # var_data_list = [q, rh, theta_v, theta, theta_e]
         var_name_list = ['q', 'rh', 'theta_v']
         var_data_list = [q, rh, theta_v]
     elif 'rh' in var_list:
         pass
+        # var_name_list = ['q', 'td', 'theta_v', 'theta', 'theta_e']
+        # var_data_list = [q, dew_point, theta_v, theta, theta_e]
         var_name_list = ['q', 'td', 'theta_v']
         var_data_list = [q, dew_point, theta_v]
 
@@ -248,7 +351,8 @@ class Qv():
         q = ds.q*10**3*units('g/kg')
         qv_u = q*u/constants.g
         qv_v = q*v/constants.g
-        qf = xr.ufuncs.sqrt(qv_u**2+qv_v**2) # 水汽通量的大小,模
+        # qf = xr.ufuncs.sqrt(qv_u**2+qv_v**2) # 水汽通量的大小,模
+        qf = np.sqrt(qv_u**2+qv_v**2) # 水汽通量的大小,模
         dda = xr.concat([qv_u, qv_v, qf], pd.Index(['qv_u', 'qv_v', 'qv_f'], name='model'))
         dds = dda.to_dataset(dim='model')
         return dds
@@ -383,3 +487,105 @@ def caculate_average_wrf(da, area = {'lat1':33, 'lat2':34, 'lon1':111.5, 'lon2':
     da = da*clon*clat
     da_mean = da.mean(dim=['south_north', 'west_east'])
     return da_mean
+
+def uv2wind(u,v):
+    """将u,v风转为风向、风速
+
+    Args:
+        u ([type]): [description]
+        v ([type]): [description]
+
+    Returns:
+        [type]: 风速、风向（角度）
+    """
+    deg = 180.0/np.pi # 角度和弧度之间的转换
+    rad = np.pi/180.0
+    wind_speed = xr.ufuncs.sqrt(u**2+v**2)
+    wind_speed.name = 'wind_speed'
+    wind_angle = 180.0+xr.ufuncs.arctan2(u, v)*deg
+    wind_angle.name = 'wind_angle'
+    # wind_speed
+    return wind_speed, wind_angle
+
+
+def caculate_div(ds):
+    """计算单层, 单个时次水汽通量散度
+
+    Args:
+        ds (Dataset): 
+            lat, lon坐标的多维数组, 包含有q,u,v等变量
+            # q: kg/kg
+            u: m/s
+            v: m/s
+
+    Returns:
+        qv_div : 计算好的水汽通量散度
+    """
+    lon = ds.lon
+    lat = ds.lat
+    u = ds.u*units('m/s')
+    v = ds.v*units('m/s')
+    # q = ds.q*10**3*units('g/kg')
+    # qv_u = q*u/constants.g
+    # qv_v = q*v/constants.g
+
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    div = ca.divergence(u=u, v=v, dx=dx, dy=dy)
+    return div
+
+def concat_dxy(var, index):
+    """将二维数据在垂直方向上累加
+    变成三维的
+
+    Args:
+        var ([type]): 二维变量
+        index ([type]): 垂直方向的索引
+
+    Returns:
+        var_concat: 累加到一块的数据
+    """
+    var_list = []
+    # index = u.bottom_top.values
+    for i in index:
+        # print(i)
+        aa = var.magnitude  # 转为numpy
+        bb = xr.DataArray(aa, dims=['south_north', 'west_east']) # 转为DataArray
+        var_list.append(bb)
+    var_concat = xr.concat(var_list, dim=pd.Index(index, name='bottom_top'))
+    return var_concat
+
+def caculate_div3d(u, v, lon, lat):
+    """求wrfout数据中三维的u,v数据对应的散度
+    就先原始的wrfout数据吧
+
+    Args:
+        u ([type]): 三维
+        v ([type]): 三维
+        lon ([type]): 二维
+        lat ([type]): 二维
+        
+    Example:
+        wrf_file = '/mnt/zfm_18T/fengxiang/HeNan/Data/GWD/d03/gwd0/wrfout_d01_2021-07-19_18:00:00'
+        ncfile = Dataset(wrf_file)
+        u =  getvar(ncfile, 'ua')
+        v =  getvar(ncfile, 'va')
+        lon = u.XLONG
+        lat = u.XLAT
+        div = caculate_div3d(u,v, lon, lat)
+        div
+    """
+    pass
+    u = u*units('m/s')
+    v = v*units('m/s')
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    ## 重组dx和dy, 其实就是把dx和dy的垂直维度加上，虽然每个垂直层上数据一样, 这是由于metpy计算时的问题导致的
+    index = u.bottom_top.values
+    ddx = concat_dxy(dx, index)
+    ddy = concat_dxy(dy, index)
+    dddx = ddx.values*units('m')
+    dddy = ddy.values*units('m')
+    ### 因为这个函数的问题，所以dx必须是和u维度相对应的
+    div = ca.divergence(u=u, v=v, dx=dddx, dy=dddy)
+    # div
+    div = div.rename('div')
+    return div
