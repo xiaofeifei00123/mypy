@@ -26,7 +26,7 @@ from metpy.calc import equivalent_potential_temperature
 import metpy.interpolate as interp
 
 
-def caculate_q_rh_theta(ds):
+def caculate_q_rh_thetaev(ds):
     """计算比湿，位温等诊断变量
     theta, theta_e, theta_v
     主要用于计算探空资料获得的数据
@@ -112,19 +112,14 @@ def caculate_q_rh_theta(ds):
 
 
 
-
-
-
-
-
-
-
-
 def caculate_q_rh_thetav(ds):
     """计算比湿，位温等诊断变量
     用于计算wrfout所获得的数据
     传入的温度和露点必须是摄氏温度
     根据td或者rh计算q,theta_v
+    没有对于theta和theta_e的计算，
+    适用于对wrfout数据的处理，它的theta可以直接计算
+    温度和露点温度的单位全部都换算成摄氏度，再输入
     返回比湿q, 虚位温theta_v, 相对湿度rh
 
     Args:
@@ -168,8 +163,8 @@ def caculate_q_rh_thetav(ds):
     w = mixing_ratio_from_specific_humidity(q)
     theta_v = virtual_potential_temperature(pressure, temperature, w)
 
-    theta = potential_temperature(pressure, temperature)
-    theta_e = equivalent_potential_temperature(pressure, temperature, dew_point)
+    # theta = potential_temperature(pressure, temperature)
+    # theta_e = equivalent_potential_temperature(pressure, temperature, dew_point)
 
     if 'td' in var_list:
         rh = relative_humidity_from_dewpoint(temperature, dew_point)
@@ -208,6 +203,52 @@ def caculate_q_rh_thetav(ds):
     return ds_return
 
 
+def caculate_vo_div(dds):
+    """ 抽取并计算出需要的数据
+    输入Dataset，二维的，包含q(kg/kg),u,v变量
+    根据q,u,v计算涡度和散度
+    单层，单个时次
+    主要是用这个，后面几个函数可以不要用
+
+    Args:
+        dds ([type]): [description]
+
+    Returns:
+        [type]: [description]
+        qv     10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
+    """
+
+    dims_origin = dds['q'].dims  # 这是一个tuple, 初始维度顺序
+    lon = dds.lon
+    lat = dds.lat
+    u = dds.u*units('m/s')
+    v = dds.v*units('m/s')
+    # q = dds.q*10**3*units('g/kg')
+    # qu = q*u/constants.g
+    # qv = q*v/constants.g
+
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    div = ca.divergence(u=u, v=v, dx=dx, dy=dy) # q div
+    vo = ca.vorticity(u=u,v=v, dx=dx, dy=dy)
+    # qf_div = qf_div*10**2  # 10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
+    # qf = np.sqrt(qu**2+qv**2)  # q flux
+    
+    var_name_list = ['div', 'vo']
+    var_list = [div, vo]
+
+    ds_return = xr.Dataset()
+    for i,j in zip(var_name_list, var_list):
+        ds_return[i] = j 
+    ds_return = ds_return.transpose(*dims_origin)
+    return ds_return
+
+
+
+
+
+
+
+
 class QvDiv():
     """水汽通量散度的计算,
     这里分装这个类的意图是使得计算水汽通量散度更好区分，
@@ -215,6 +256,47 @@ class QvDiv():
     """
     def __init__(self) -> None:
         pass
+
+    
+    def caculate_qfdiv(self, dds):
+        """ 抽取并计算出需要的数据
+        输入Dataset，二维的，包含q(kg/kg),u,v变量
+        根据q,u,v计算水汽通量和水汽通量散度
+        单层，单个时次
+        主要是用这个，后面几个函数可以不要用
+
+        Args:
+            dds ([type]): [description]
+
+        Returns:
+            [type]: [description]
+            qv     10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
+        """
+
+        dims_origin = dds['q'].dims  # 这是一个tuple, 初始维度顺序
+        lon = dds.lon
+        lat = dds.lat
+        u = dds.u*units('m/s')
+        v = dds.v*units('m/s')
+        q = dds.q*10**3*units('g/kg')
+        qu = q*u/constants.g
+        qv = q*v/constants.g
+
+        dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+        qf_div = ca.divergence(u=qu, v=qv, dx=dx, dy=dy) # q div
+        qf_div = qf_div*10**2  # 10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
+        qf = np.sqrt(qu**2+qv**2)  # q flux
+        
+        var_name_list = ['qu', 'qv', 'qf', 'qf_div']
+        var_list = [qu, qv, qf, qf_div]
+
+        ds_return = xr.Dataset()
+        for i,j in zip(var_name_list, var_list):
+            ds_return[i] = j 
+        ds_return = ds_return.transpose(*dims_origin)
+        return ds_return
+    
+    
     def caculate_qv_div(self, ds):
         """计算单层, 单个时次水汽通量散度
 
@@ -238,6 +320,7 @@ class QvDiv():
 
         dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
         qv_div = ca.divergence(u=qv_u, v=qv_v, dx=dx, dy=dy)
+        qv_div = qv_div*10**2  # 10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
         return qv_div
 
     # dds.sel(pressure=500)
