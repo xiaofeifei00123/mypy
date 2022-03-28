@@ -34,11 +34,14 @@ class Map():
     pass
     def __init__(self) -> None:
         pass
-        # self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
+        # self.path_china = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
+        # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/continents_lines.shp'
+        self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/NationalBorder.shp'
+        # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/County.shp'
         self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Province_shp/henan.shp'
         self.path_city = '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_henan/henan.shp'
 
-    def create_map(self, ax, map_dic):
+    def create_map(self, ax, map_dic, ):
         """为geoax添加底图、标签等属性
 
         Args:
@@ -88,9 +91,77 @@ class Map():
         ax.xaxis.set_major_formatter(LongitudeFormatter(degree_symbol="$^{\circ}$"))  # 使用半角的度，用latex公式给出
         ax.yaxis.set_major_formatter(LatitudeFormatter(degree_symbol="$^{\circ}$"))
 
-        ax.tick_params(axis='both', labelsize=25, direction='out')
-        ax.tick_params(which='major',length=10,width=2.0) # 控制标签大小 
-        ax.tick_params(which='minor',length=5,width=1.0)  #,colors='b')
+        # ax.tick_params(axis='both', labelsize=10, direction='out')
+        # ax.tick_params(which='major',length=6,width=1.0) # 控制标签大小 
+        # ax.tick_params(which='minor',length=3,width=0.5)  #,colors='b')
+        ax.tick_params(axis='both', labelsize=8, direction='out')
+        ax.tick_params(which='major',length=4,width=0.8) # 控制标签大小 
+        ax.tick_params(which='minor',length=2,width=0.4)  #,colors='b')
+
+        return ax
+
+    def create_map_china(self, ax, 
+            map_dic = {
+                'proj':ccrs.PlateCarree(),
+                'extent':[110, 117, 31, 37],
+                'extent_interval_lat':1,
+                'extent_interval_lon':1,
+            },):
+        """为geoax添加底图、标签等属性
+
+        Args:
+            ax ([type]): [description]
+
+        Example:
+            fig = plt.figure(figsize=(12, 12), dpi=600)
+            proj = ccrs.PlateCarree()  # 创建坐标系
+            ax = fig.add_axes([0.1,0.1,0.85,0.85], projection=proj)
+            ma = Map()
+
+            map_dic = {
+                'proj':ccrs.PlateCarree(),
+                'extent':[110, 117, 31, 37],
+                'extent_interval_lat':1,
+                'extent_interval_lon':1,
+            }
+            ma.create_map(ax, map_dic)
+        # TODO  目前是只设置了河南省的地形文件，其他的待设置和安排
+        """
+
+        proj = map_dic['proj']
+        ax.set_extent(map_dic['extent'], crs=proj)
+        # ax.add_feature(cfeature.COASTLINE.with_scale('110m')) 
+        province = cfeature.ShapelyFeature(
+            Reader(self.path_china).geometries(),
+            proj,
+            edgecolor='k',
+            facecolor='none')
+        city = cfeature.ShapelyFeature(
+            Reader(self.path_city).geometries(),
+            proj,
+            edgecolor='k',
+            facecolor='none')
+        ax.add_feature(province, linewidth=1, zorder=2, alpha=0.6) # zorder 设置图层为2, 总是在最上面显示
+        # ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
+
+        ## 绘制坐标标签
+        ax.set_yticks(np.arange(map_dic['extent'][2], map_dic['extent'][3] + map_dic['extent_interval_lat'], map_dic['extent_interval_lat'], dtype='int'), crs=proj)
+        ax.set_xticks(np.arange(map_dic['extent'][0], map_dic['extent'][1] + map_dic['extent_interval_lon'], map_dic['extent_interval_lon'], dtype='int',), crs=proj)
+
+        # ax.yaxis.set_minor_locator(plt.MultipleLocator(1))
+        ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(0.5))
+        # ax.xaxis.set_minor_locator(plt.MultipleLocator(1))
+
+        ax.xaxis.set_major_formatter(LongitudeFormatter(degree_symbol="$^{\circ}$"))  # 使用半角的度，用latex公式给出
+        ax.yaxis.set_major_formatter(LatitudeFormatter(degree_symbol="$^{\circ}$"))
+
+        # ax.tick_params(axis='both', labelsize=10, direction='out')
+        # ax.tick_params(which='major',length=6,width=1.0) # 控制标签大小 
+        # ax.tick_params(which='minor',length=3,width=0.5)  #,colors='b')
+        ax.tick_params(axis='both', labelsize=8, direction='out')
+        ax.tick_params(which='major',length=4,width=0.8) # 控制标签大小 
+        ax.tick_params(which='minor',length=2,width=0.4)  #,colors='b')
 
         return ax
 
@@ -114,8 +185,16 @@ class Map():
             ma.add_station(ax, station, justice=True, delx=0.1)
         """
         pass
+        fontsize = 10
+        ssize = 10
+        if 'fontsize' in note.keys():
+            fontsize = note['fontsize']
+        if 'ssize' in note.keys():
+            ssize = note['ssize']
+
+
         values = station.values()
-        station_name = list(station.keys())
+        # station_name = list(station.keys())
         station_name = []
         x = []
         y = []
@@ -131,8 +210,8 @@ class Map():
                    color='black',
                    transform=ccrs.PlateCarree(),
                    alpha=1.,
-                   linewidth=5,
-                   s=35,
+                #    linewidth=5,
+                   s=ssize,
                    zorder=2
                    )
         # 给站点加注释
@@ -153,7 +232,7 @@ class Map():
                         station_name[i],
                         transform=ccrs.PlateCarree(),
                         alpha=1.,
-                        fontdict={ 'size': 28, },
+                        fontdict={ 'size': fontsize, },
                         zorder=2,
                         )
 
