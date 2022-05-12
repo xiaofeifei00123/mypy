@@ -34,9 +34,9 @@ class Map():
     pass
     def __init__(self) -> None:
         pass
-        # self.path_china = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
+        self.path_china = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/continents_lines.shp'
-        self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/NationalBorder.shp'
+        # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/NationalBorder.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/County.shp'
         self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Province_shp/henan.shp'
         self.path_city = '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_henan/henan.shp'
@@ -65,7 +65,14 @@ class Map():
 
         proj = map_dic['proj']
         ax.set_extent(map_dic['extent'], crs=proj)
+        # ax.set_ylim(map_dic['extent'][2], map_dic['extent'][3])
+        # ax.set_xlim(map_dic['extent'][0], map_dic['extent'][1])
         # ax.add_feature(cfeature.COASTLINE.with_scale('110m')) 
+        country = cfeature.ShapelyFeature(
+            Reader(self.path_china).geometries(),
+            proj,
+            edgecolor='k',
+            facecolor='none')
         province = cfeature.ShapelyFeature(
             Reader(self.path_province).geometries(),
             proj,
@@ -76,8 +83,9 @@ class Map():
             proj,
             edgecolor='k',
             facecolor='none')
-        ax.add_feature(province, linewidth=1, zorder=2, alpha=0.6) # zorder 设置图层为2, 总是在最上面显示
-        ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
+        # ax.add_feature(province, linewidth=1, zorder=2, alpha=0.6) # zorder 设置图层为2, 总是在最上面显示
+        # ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
+        ax.add_feature(country, linewidth=1, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
 
         ## 绘制坐标标签
         ax.set_yticks(np.arange(map_dic['extent'][2], map_dic['extent'][3] + map_dic['extent_interval_lat'], map_dic['extent_interval_lat'], dtype='int'), crs=proj)
@@ -187,10 +195,14 @@ class Map():
         pass
         fontsize = 10
         ssize = 10
+        marker = '.'
         if 'fontsize' in note.keys():
             fontsize = note['fontsize']
         if 'ssize' in note.keys():
             ssize = note['ssize']
+        if 'marker' in note.keys():
+            marker = note['marker']
+
 
 
         values = station.values()
@@ -212,29 +224,30 @@ class Map():
                    alpha=1.,
                 #    linewidth=5,
                    s=ssize,
-                   zorder=2
+                   zorder=2,
+                   marker=marker,
                    )
         # 给站点加注释
         # if note:
         #     pass
         if 'justice' in note.keys():
-
-            for i in range(len(x)):
-                # print(x[i])
-                delx = -0.2
-                dely = 0.1
-                if 'delx' in note.keys():
-                    delx = note['delx']
-                if 'dely' in note.keys():
-                    dely = note['dely']
-                ax.text(x[i] + delx,
-                        y[i] + dely,
-                        station_name[i],
-                        transform=ccrs.PlateCarree(),
-                        alpha=1.,
-                        fontdict={ 'size': fontsize, },
-                        zorder=2,
-                        )
+            if note['justice']:
+                for i in range(len(x)):
+                    # print(x[i])
+                    delx = -0.2
+                    dely = 0.1
+                    if 'delx' in note.keys():
+                        delx = note['delx']
+                    if 'dely' in note.keys():
+                        dely = note['dely']
+                    ax.text(x[i] + delx,
+                            y[i] + dely,
+                            station_name[i],
+                            transform=ccrs.PlateCarree(),
+                            alpha=1.,
+                            fontdict={ 'size': fontsize, },
+                            zorder=2,
+                            )
 
 def draw_south_sea(fig,):
     pass

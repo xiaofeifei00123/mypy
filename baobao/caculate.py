@@ -671,4 +671,7 @@ def caculate_div3d(u, v, lon, lat):
     div = ca.divergence(u=u, v=v, dx=dddx, dy=dddy)
     # div
     div = div.rename('div')
+    div = div.metpy.dequantify()
+
+
     return div
