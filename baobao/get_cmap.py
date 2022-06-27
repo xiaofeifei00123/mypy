@@ -1,3 +1,6 @@
+import pandas as pd
+import os
+import numpy as np
 
 def get_rgb(fn):
     """
@@ -16,8 +19,9 @@ def select_cmap(flag):
     flag : 选择哪个色标    
 
     """
+    path = os.path.dirname(os.path.abspath(__file__))
     if flag == 'rain9':
-        flnm = './colortxt/9colors_rain.rgb'
+        flnm = path+'/colortxt/9colors_rain.rgb'
         rgb = get_rgb(flnm)
         
     return rgb
