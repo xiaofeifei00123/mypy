@@ -10,3 +10,14 @@ def get_rgb(fn):
         rgb.append(row.tolist())
     rgb = np.array(rgb)/255.
     return rgb
+
+def select_cmap(flag):
+    """
+    flag : 选择哪个色标    
+
+    """
+    if flag == 'rain9':
+        flnm = './colortxt/9colors_rain.rgb'
+        rgb = get_rgb(flnm)
+        
+    return rgb
