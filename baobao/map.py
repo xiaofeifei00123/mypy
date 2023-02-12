@@ -25,6 +25,7 @@ from matplotlib.path import Path
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from cartopy.mpl import geoaxes
+import pandas as pd
 
 import numpy as np
 # %%
@@ -34,12 +35,12 @@ class Map():
     pass
     def __init__(self) -> None:
         pass
-        self.path_china = '/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
+        self.path_china = '/home/fengx20/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/continents_lines.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/NationalBorder.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/County.shp'
-        self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Province_shp/henan.shp'
-        self.path_city = '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_henan/henan.shp'
+        self.path_province = '/home/fengx20/DATA/SHP/Province_shp/henan.shp'
+        self.path_city = '/home/fengx20/DATA/SHP/shp_henan/henan.shp'
 
     def create_map(self, ax, map_dic, ):
         """为geoax添加底图、标签等属性
@@ -84,7 +85,7 @@ class Map():
             edgecolor='k',
             facecolor='none')
         # ax.add_feature(province, linewidth=1, zorder=2, alpha=0.6) # zorder 设置图层为2, 总是在最上面显示
-        # ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
+        ax.add_feature(city, linewidth=0.5, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
         ax.add_feature(country, linewidth=1, zorder=2, alpha=0.5) # zorder 设置图层为2, 总是在最上面显示
 
         ## 绘制坐标标签
@@ -111,7 +112,8 @@ class Map():
     def create_map_china(self, ax, 
             map_dic = {
                 'proj':ccrs.PlateCarree(),
-                'extent':[110, 117, 31, 37],
+                # 'extent':[110, 117, 31, 37],
+                'extent':[108, 120, 30, 38],
                 'extent_interval_lat':1,
                 'extent_interval_lon':1,
             },):
@@ -253,6 +255,21 @@ def draw_south_sea(fig,):
     pass
     ax2 = fig.add_axes([0.798, 0.145, 0.2, 0.2],projection=ccrs.PlateCarree())
     ax2.add_geometries(Reader('/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp').geometries(),ccrs.PlateCarree(),facecolor='none',edgecolor='black',linewidth=0.8)
+
+
+def get_rgb(fn):
+    """
+    fn: rgb_txt文件存储路径
+    """
+    # fn = './11colors.txt'
+    df = pd.read_csv(fn, skiprows=4, sep='\s+',encoding='gbk',header=None, names=['r','g','b'])
+    rgb = []
+    for ind, row in df.iterrows():
+        rgb.append(row.tolist())
+    rgb = np.array(rgb)/255.
+    return rgb
+
+
 
 if __name__ == '__main__':
 ############# 测试 ############
