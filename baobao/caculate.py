@@ -10,6 +10,7 @@ Version          :1.0
 Time：2021/11/03/ 10:33
 '''
 
+# %%
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -25,6 +26,46 @@ from metpy.calc import dewpoint_from_relative_humidity
 from metpy.calc import equivalent_potential_temperature
 import metpy.interpolate as interp
 
+import netCDF4 as nc
+from netCDF4 import Dataset
+import wrf
+from wrf import getvar
+
+
+def caculate_q_from_dewpoint(td, pre):
+    """_summary_, 根据露点温度和气压计算比湿， 没有维度属性，纯数学计算
+
+    Args:
+        td (np.ndarray): 露点温度， 摄氏度
+        pre (np.ndarray): 气压， hPa
+
+    Returns:
+        _type_: _description_
+    """
+    pressure = units.Quantity(pre, "hPa")
+    dewpoint = units.Quantity(td, "degC")
+    q = specific_humidity_from_dewpoint(pressure, dewpoint)
+    return q.magnitude
+
+def caculate_q_from_dewpoint_xarray(td, pre):
+    """_summary_, 根据露点温度和气压计算比湿， 没有维度属性，纯数学计算
+
+    Args:
+        td (xr.DataArray): 露点温度， 摄氏度
+        pre (xr.DataArray): 气压， hPa
+
+    Returns:
+        _type_: _description_
+    """
+    pressure = units.Quantity(pre.values, "hPa")
+    dewpoint = units.Quantity(td.values, "degC")
+    q = specific_humidity_from_dewpoint(pressure, dewpoint)
+    qr = xr.DataArray(
+        q.magnitude,
+        coords = td.coords, 
+        dims = td.dims
+    )
+    return qr
 
 def caculate_q_rh_thetaev(ds):
     """计算比湿，位温等诊断变量
@@ -218,7 +259,7 @@ def caculate_vo_div(dds):
         qv     10^{-5} ~g \cdot {cm}^{-2} \cdot {hPa}^{-1} \cdot s^{-1}
     """
 
-    dims_origin = dds['q'].dims  # 这是一个tuple, 初始维度顺序
+    dims_origin = dds['u'].dims  # 这是一个tuple, 初始维度顺序
     lon = dds.lon
     lat = dds.lat
     u = dds.u*units('m/s')
@@ -673,5 +714,186 @@ def caculate_div3d(u, v, lon, lat):
     div = div.rename('div')
     div = div.metpy.dequantify()
 
-
     return div
+
+def caculate_vor3d(u, v, lon, lat):
+    """求wrfout数据中三维的u,v数据对应的涡度
+    就先原始的wrfout数据吧
+
+    Args:
+        u ([type]): 三维
+        v ([type]): 三维
+        lon ([type]): 二维
+        lat ([type]): 二维
+        
+    Example:
+        wrf_file = '/mnt/zfm_18T/fengxiang/HeNan/Data/GWD/d03/gwd0/wrfout_d01_2021-07-19_18:00:00'
+        ncfile = Dataset(wrf_file)
+        u =  getvar(ncfile, 'ua')
+        v =  getvar(ncfile, 'va')
+        lon = u.XLONG
+        lat = u.XLAT
+        div = caculate_div3d(u,v, lon, lat)
+        div
+    """
+    pass
+    u = u*units('m/s')
+    v = v*units('m/s')
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    ## 重组dx和dy, 其实就是把dx和dy的垂直维度加上，虽然每个垂直层上数据一样, 这是由于metpy计算时的问题导致的
+    index = u.bottom_top.values
+    ddx = concat_dxy(dx, index)
+    ddy = concat_dxy(dy, index)
+    dddx = ddx.values*units('m')
+    dddy = ddy.values*units('m')
+    ### 因为这个函数的问题，所以dx必须是和u维度相对应的
+    vor = ca.vorticity(u=u, v=v, dx=dddx, dy=dddy)
+    # vor
+    vor = vor.rename('vor')
+    vor = vor.metpy.dequantify()
+
+    return vor
+
+
+
+def caculate_pdiv3d(u, v, lon, lat):
+    """计算扰动散度
+
+    Example:
+        wrf_file = '/mnt/zfm_18T/fengxiang/HeNan/Data/GWD/d03/gwd0/wrfout_d01_2021-07-19_18:00:00'
+        ncfile = Dataset(wrf_file)
+        u =  getvar(ncfile, 'ua')
+        v =  getvar(ncfile, 'va')
+        lon = u.XLONG
+        lat = u.XLAT
+        div = caculate_pdiv3d(u,v, lon, lat)
+        div
+    """
+
+    u = u*units('m/s')
+    v = v*units('m/s')
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    ## 重组dx和dy, 其实就是把dx和dy的垂直维度加上，虽然每个垂直层上数据一样, 这是由于metpy计算时的问题导致的
+    index = u.bottom_top.values
+    ddx = concat_dxy(dx, index)
+    ddy = concat_dxy(dy, index)
+    dddx = ddx.values*units('m')
+    dddy = ddy.values*units('m')
+    ### 因为这个函数的问题，所以dx必须是和u维度相对应的
+
+    ## 计算扰动速度
+    up = u - u.mean(dim=['south_north', 'west_east'])
+    vp = v - v.mean(dim=['south_north', 'west_east'])
+
+    ## 计算扰动速度的散度和涡度
+    div = ca.divergence(u=up, v=vp, dx=dddx, dy=dddy)
+    div = div.rename('div')
+    div = div.metpy.dequantify()
+    return div
+
+    
+    
+def caculate_pvor3d(u, v, lon, lat):
+    """计算扰动涡度
+
+    Example:
+        wrf_file = '/mnt/zfm_18T/fengxiang/HeNan/Data/GWD/d03/gwd0/wrfout_d01_2021-07-19_18:00:00'
+        ncfile = Dataset(wrf_file)
+        u =  getvar(ncfile, 'ua')
+        v =  getvar(ncfile, 'va')
+        lon = u.XLONG
+        lat = u.XLAT
+        div = caculate_pdiv3d(u,v, lon, lat)
+        div
+    """
+
+    u = u*units('m/s')
+    v = v*units('m/s')
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    ## 重组dx和dy, 其实就是把dx和dy的垂直维度加上，虽然每个垂直层上数据一样, 这是由于metpy计算时的问题导致的
+    index = u.bottom_top.values
+    ddx = concat_dxy(dx, index)
+    ddy = concat_dxy(dy, index)
+    dddx = ddx.values*units('m')
+    dddy = ddy.values*units('m')
+    ### 因为这个函数的问题，所以dx必须是和u维度相对应的
+
+    ## 计算扰动速度
+    up = u - u.mean(dim=['south_north', 'west_east'])
+    vp = v - v.mean(dim=['south_north', 'west_east'])
+
+    ## 计算扰动速度的散度和涡度
+    vor = ca.vorticity(u=up, v=vp, dx=dddx, dy=dddy)
+    vor = vor.rename('vor')
+    vor = vor.metpy.dequantify()
+    return vor
+
+def get_div_wrfout(flnm):
+    """_summary_
+
+    Args:
+        flnm (_type_): flnm_wrfout
+    """
+    pass
+    wrf_file = flnm
+    ncfile = Dataset(wrf_file)
+    u =  getvar(ncfile, 'ua')
+    v =  getvar(ncfile, 'va')
+    lon = u.XLONG
+    lat = u.XLAT
+    div = caculate_div3d(u,v, lon, lat)
+    return div
+
+def get_vor_wrfout(flnm):
+    pass
+    wrf_file = flnm
+    ncfile = Dataset(wrf_file)
+    u =  getvar(ncfile, 'ua')
+    v =  getvar(ncfile, 'va')
+    lon = u.XLONG
+    lat = u.XLAT
+    vor = caculate_vor3d(u,v, lon, lat)
+    return vor
+
+if __name__ == '__main__':
+
+    # %%
+    wrf_file = '/mnt/zfm_18T/fengxiang/HeNan/Data/GWD/d03/gwd0/wrfout_d01_2021-07-19_18:00:00'
+    ncfile = Dataset(wrf_file)
+    u =  getvar(ncfile, 'ua')
+    v =  getvar(ncfile, 'va')
+    lon = u.XLONG
+    lat = u.XLAT
+
+    u = u*units('m/s')
+    v = v*units('m/s')
+    dx, dy = ca.lat_lon_grid_deltas(lon.values, lat.values)
+    ## 重组dx和dy, 其实就是把dx和dy的垂直维度加上，虽然每个垂直层上数据一样, 这是由于metpy计算时的问题导致的
+    index = u.bottom_top.values
+    ddx = concat_dxy(dx, index)
+    ddy = concat_dxy(dy, index)
+    dddx = ddx.values*units('m')
+    dddy = ddy.values*units('m')
+    ### 因为这个函数的问题，所以dx必须是和u维度相对应的
+
+    ## 计算扰动速度
+    up = u - u.mean(dim=['south_north', 'west_east'])
+    vp = v - v.mean(dim=['south_north', 'west_east'])
+
+    # %%
+    up = up*10**5
+    vp = vp*10**5
+    # %%
+    u = u*10**5
+    v = v*10**5
+
+    # %%
+    ## 计算扰动速度的散度和涡度
+    # div = ca.divergence(u=up, v=vp, dx=dddx, dy=dddy)
+    div = ca.divergence(u=u, v=v, dx=dddx, dy=dddy)
+    div = div.rename('div')
+    div = div.metpy.dequantify()
+    div.max()
+    # return div
+    # %%
+    div.mean(dim=['south_north', 'west_east']).plot()

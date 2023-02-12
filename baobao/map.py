@@ -196,7 +196,7 @@ class Map():
         """
         pass
         fontsize = 10
-        ssize = 10
+        ssize = 12
         marker = '.'
         if 'fontsize' in note.keys():
             fontsize = note['fontsize']
@@ -249,6 +249,7 @@ class Map():
                             alpha=1.,
                             fontdict={ 'size': fontsize, },
                             zorder=2,
+                            # bbox={'boxstyle': 'square', 'facecolor': 'white', edgecolor='white'},
                             )
 
 def draw_south_sea(fig,):
