@@ -1,9 +1,7 @@
-#!/home/fengxiang/anaconda3/envs/wrfout/bin/python
 # -*- encoding: utf-8 -*-
 '''
 Description:
 分装一些计算诊断变量的函数
-
 -----------------------------------------
 Author           :Forxd
 Version          :1.0
