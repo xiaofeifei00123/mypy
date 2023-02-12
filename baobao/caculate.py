@@ -898,4 +898,3 @@ if __name__ == '__main__':
     # return div
     # %%
     div.mean(dim=['south_north', 'west_east']).plot()
->>>>>>> 87623445a5f264c0dc2c433d10e26e3398a1cff5

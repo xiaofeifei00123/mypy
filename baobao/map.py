@@ -29,6 +29,18 @@ import pandas as pd
 
 import numpy as np
 # %%
+def update_font():
+    from matplotlib import rcParams
+    config = { 
+        "font.family": 'serif', # 衬线字体
+        "font.size": 12, # 相当于小四大小
+        "font.serif": ['SimSun'], # 宋体
+        "mathtext.fontset": 'stix', # matplotlib渲染数学字体时使用的字体，和Times New Roman差别不大
+        'axes.unicode_minus': False # 处理负号，即-号
+    }
+    rcParams.update(config)
+    import numpy as np
+
 
 # %%
 class Map():
