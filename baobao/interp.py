@@ -17,7 +17,7 @@ from metpy.interpolate import interpolate_to_grid
 
 
 def regrid_xesmf(dataset, area):
-    """利用xESMF库，将非标准格点的数据，插值到标准格点上去
+    """利用xESMF库，将非标准格点的数据，插值到标准格点上去, wrf插值到latlon
     注意：dataset的coords, lat,lon 必须同时是一维或是二维的
     Args:
         dataset ([type]): Dataset格式的数据, 多变量，多时次，多层次
@@ -54,6 +54,7 @@ def regrid_xesmf(dataset, area):
 
 def rain_station2grid(da, area, r=0.2, min_neighbors=3):
     """将站点数据，插值为格点数据
+    利用的metpy是反距离权重插值，速度较慢
 
     Args:
     da:
@@ -107,10 +108,13 @@ def rain_station2grid(da, area, r=0.2, min_neighbors=3):
     ddc = xr.concat(grid_list,dim='time')
     return ddc
 
-# def grid2station(cc):
-#     """格点数据插值到站点上
-#     """
-#     sta = cc.id.values
-#     lon = xr.DataArray(cc.lon.values, coords=[sta], dims=['sta'])
-#     lat = xr.DatArray(cc.lat.values, coords=[sta], dims=['sta'])
-#     rr = rain.interp(lon=lon, lat=lat, method='nearest').round(1)
+def grid2station(cc):
+
+    """格点数据插值到站点上
+    地面站点插值到wrfout, 用scipy  griddata
+    wrfout 插地面站点, 用这个sel方法，选择临近点
+    """
+    # sta = cc.id.values
+    lon = xr.DataArray(cc.lon.values, coords=[sta], dims=['sta']) 
+    lat = xr.DatArray(cc.lat.values, coords=[sta], dims=['sta'])
+    rr = rain.interp(lon=lon, lat=lat, method='nearest').round(1)

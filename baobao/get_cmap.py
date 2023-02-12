@@ -1,3 +1,6 @@
+import pandas as pd
+import os
+import numpy as np
 
 def get_rgb(fn):
     """
@@ -9,4 +12,16 @@ def get_rgb(fn):
     for ind, row in df.iterrows():
         rgb.append(row.tolist())
     rgb = np.array(rgb)/255.
+    return rgb
+
+def select_cmap(flag):
+    """
+    flag : 选择哪个色标    
+
+    """
+    path = os.path.dirname(os.path.abspath(__file__))
+    if flag == 'rain9':
+        flnm = path+'/colortxt/9colors_rain.rgb'
+        rgb = get_rgb(flnm)
+        
     return rgb

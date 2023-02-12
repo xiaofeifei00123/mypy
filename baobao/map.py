@@ -35,12 +35,12 @@ class Map():
     pass
     def __init__(self) -> None:
         pass
-        self.path_china = '/home/fengx20/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
+        self.path_china='/mnt/zfm_18T/fengxiang/DATA/SHP/Map/cn_shp/Province_9/Province_9.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/continents_lines.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/NationalBorder.shp'
         # self.path_china= '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_micaps/County.shp'
-        self.path_province = '/home/fengx20/DATA/SHP/Province_shp/henan.shp'
-        self.path_city = '/home/fengx20/DATA/SHP/shp_henan/henan.shp'
+        self.path_province = '/mnt/zfm_18T/fengxiang/DATA/SHP/Province_shp/henan.shp'
+        self.path_city = '/mnt/zfm_18T/fengxiang/DATA/SHP/shp_henan/henan.shp'
 
     def create_map(self, ax, map_dic, ):
         """为geoax添加底图、标签等属性
@@ -196,7 +196,7 @@ class Map():
         """
         pass
         fontsize = 10
-        ssize = 10
+        ssize = 12
         marker = '.'
         if 'fontsize' in note.keys():
             fontsize = note['fontsize']
@@ -249,6 +249,7 @@ class Map():
                             alpha=1.,
                             fontdict={ 'size': fontsize, },
                             zorder=2,
+                            # bbox={'boxstyle': 'square', 'facecolor': 'white', edgecolor='white'},
                             )
 
 def draw_south_sea(fig,):
